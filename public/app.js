@@ -55,7 +55,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('lobby').style.display = 'block';
         document.getElementById('currentRoom').innerText = code;
         document.getElementById('startGameBtn').style.display = 'inline-block';
-        lobbyMusic.play().catch(() => {});
+
+        if (isHost) {
+            lobbyMusic.play().catch(() => {});
+        }
     });
 
     socket.on('roomJoined', ({ code }) => {
@@ -64,7 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('lobby').style.display = 'block';
         document.getElementById('currentRoom').innerText = code;
         document.getElementById('startGameBtn').style.display = isHost ? 'inline-block' : 'none';
-        lobbyMusic.play().catch(() => {});
+
+        if (isHost) {
+            lobbyMusic.play().catch(() => {});
+        }
     });
 
     socket.on('playerList', (players) => {
@@ -91,8 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     socket.on('gameStarted', ({ role, word, real }) => {
-        lobbyMusic.pause();
-        lobbyMusic.currentTime = 0;
+        if (isHost) {
+            lobbyMusic.pause();
+        }
+
         document.getElementById('lobby').style.display = 'none';
         document.getElementById('gameArea').style.display = 'block';
         assignedWord = word;
@@ -100,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const wordBox = document.getElementById('wordBox');
 
         if (role === 'Spy') {
-            wordBox.innerText = "You're the Spy!";
+            wordBox.innerText = "You're The Spy!";
             document.getElementById('confusedBtn').style.display = 'none';
         } else {
             wordBox.innerText = assignedWord;
@@ -126,7 +134,11 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('gameReset', () => {
         document.getElementById('gameArea').style.display = 'none';
         document.getElementById('lobby').style.display = 'block';
-        lobbyMusic.play().catch(() => {});
+
+        if (isHost) {
+            lobbyMusic.play().catch(() => {});
+        }
+
         document.getElementById('wordBox').innerText = '';
         document.getElementById('confusedBtn').style.display = 'none';
         document.getElementById('startGameBtn').style.display = isHost ? 'inline-block' : 'none';
@@ -148,7 +160,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // -------------------- CONTROL MUTE BUTTON VISIBILITY --------------------
     lobbyMusic.onplay = () => {
-        muteBtn.style.display = 'inline-block';
+        if (isHost) {
+            muteBtn.style.display = 'inline-block';
+        }
     };
 
     lobbyMusic.onpause = () => {
