@@ -1,17 +1,22 @@
 body {
     font-family: 'Press Start 2P', cursive;
     background: #111;
-    color: #0f0;
+    color: #fed42e;
     text-align: center;
     margin: 0;
     padding: 0;
 }
 
-h1 {
-    font-size: 3em;
-    color: #f0f;
-    margin-top: 30px;
-    text-shadow: 2px 2px 5px rgba(255, 0, 255, 0.7);
+.logo-header {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.logo {
+    width: 150px;
+    max-width: 90%;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 0 8px );
 }
 
 .container {
@@ -32,7 +37,7 @@ button {
 button {
     border: none;
     border-radius: 5px;
-    background: #f0f;
+    background: #1d8ddb;
     color: #fff;
     cursor: pointer;
     transition: 0.2s;
@@ -40,7 +45,7 @@ button {
 }
 
 button:hover {
-    background: #f3c;
+    background: #1e77b2;
 }
 
 #playerList {
