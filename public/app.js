@@ -5,6 +5,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let username = '';
     let assignedWord = '';
     let realWord = '';
+    const lobbyMusic = document.getElementById('lobbyMusic');
+    const muteBtn = document.getElementById('muteBtn');
+    let isMuted = false;
+
+    // -------------------- FADE OUT FUNCTION --------------------
+    function fadeOutMusic() {
+        let fadeInterval = setInterval(() => {
+            if (lobbyMusic.volume > 0.05) {
+                lobbyMusic.volume -= 0.05;
+            } else {
+                clearInterval(fadeInterval);
+                lobbyMusic.pause();
+                muteBtn.style.display = 'none';
+            }
+        }, 100);
+    }
 
     // -------------------- CREATE ROOM --------------------
     document.getElementById('createRoomBtn').onclick = () => {
@@ -39,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('lobby').style.display = 'block';
         document.getElementById('currentRoom').innerText = code;
         document.getElementById('startGameBtn').style.display = 'inline-block';
+        lobbyMusic.play().catch(() => {});
     });
 
     socket.on('roomJoined', ({ code }) => {
@@ -47,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('lobby').style.display = 'block';
         document.getElementById('currentRoom').innerText = code;
         document.getElementById('startGameBtn').style.display = isHost ? 'inline-block' : 'none';
+        lobbyMusic.play().catch(() => {});
     });
 
     socket.on('playerList', (players) => {
@@ -73,6 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     socket.on('gameStarted', ({ role, word, real }) => {
+        lobbyMusic.pause();
+        lobbyMusic.currentTime = 0;
         document.getElementById('lobby').style.display = 'none';
         document.getElementById('gameArea').style.display = 'block';
         assignedWord = word;
@@ -106,8 +126,32 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('gameReset', () => {
         document.getElementById('gameArea').style.display = 'none';
         document.getElementById('lobby').style.display = 'block';
+        lobbyMusic.play().catch(() => {});
         document.getElementById('wordBox').innerText = '';
         document.getElementById('confusedBtn').style.display = 'none';
         document.getElementById('startGameBtn').style.display = isHost ? 'inline-block' : 'none';
     });
+
+    // -------------------- MUTE BUTTON --------------------
+    muteBtn.onclick = () => {
+        if (isMuted) {
+            lobbyMusic.volume = 0.4;
+            lobbyMusic.play().catch(() => {});
+            muteBtn.innerText = 'Mute';
+            isMuted = false;
+        } else {
+            fadeOutMusic();
+            muteBtn.innerText = 'Unmute';
+            isMuted = true;
+        }
+    };
+
+    // -------------------- CONTROL MUTE BUTTON VISIBILITY --------------------
+    lobbyMusic.onplay = () => {
+        muteBtn.style.display = 'inline-block';
+    };
+
+    lobbyMusic.onpause = () => {
+        muteBtn.style.display = 'none';
+    };
 });
