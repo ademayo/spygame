@@ -1,0 +1,11 @@
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node index.js
+    ports:
+      - "127.0.0.1:${NODE_PORT}:3000"
+    working_dir: /home/node/app
+    restart: always

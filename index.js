@@ -1,144 +1,243 @@
 require('dotenv').config();
-
 const express = require('express');
-const nodemailer = require('nodemailer');
-const bodyParser = require('body-parser');
-const randomWords = require('random-words');
-const axios = require('axios');
-
 const app = express();
-const port = 3000;
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
+const sqlite3 = require('sqlite3').verbose();
+const db = new sqlite3.Database('./database/game.db');
 
-app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('public'));
+app.use(express.json());
 
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
-});
+const PORT = process.env.PORT || 3000;
 
-app.post('/send-emails', async (req, res) => {
-    const emails = req.body.emails;
-    const roles = assignRoles(emails.length);
+// -------------------- HELPERS --------------------
+function generateRoomCode (length = 4) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let code = '';
 
-    const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT,
-        secure: true,
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        }
-    });
-
-    const promises = emails.map((email, index) => {
-        const role = roles[index].role;
-        const word = roles[index].word;
-
-        let message = '';
-
-        if (role === 'Spy') {
-            message = `Your role is: Spy\nThe word you need to focus on is: "${word}"`;
-        } else {
-            message = `Your word is: "${word}"`;
-        }
-
-        return transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Spygame',
-            text: message,
-        });
-    });
-
-    try {
-        await Promise.all(promises);
-        res.send({ success: true, key: roles[0].word });
-    } catch (error) {
-        res.status(500).send('Error sending emails: ' + error.message);
+    for (let i = 0; i < length; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
     }
-});
 
-function assignRoles(playerCount) {
-    let roles = [];
-    const selectedWords = randomizeWords(playerCount);
+    return code;
+}
 
-    if (playerCount >= 4 && playerCount <= 6) {
-        const spyCount = playerCount >= 5 ? 1 : 0;
-        const confusedCount = 1;
-        roles = createRoleList(playerCount, confusedCount, spyCount, selectedWords);
-    } else if (playerCount >= 7 && playerCount <= 8) {
-        roles = createRoleList(playerCount, 2, 1, selectedWords);
-    } else if (playerCount === 4) {
-        roles = createRoleList(playerCount, 1, 0, selectedWords);
+function assignRoles (players, word1, word2) {
+    const roles = players.map(p => ({ username: p.username, role: 'Correct', word: word1 }));
+    let confusedCount = 1;
+    let spyCount = players.length >= 5 ? 1 : 0;
+
+    if (players.length >= 7 && players.length <= 8) {
+        confusedCount = 2;
+        spyCount = 1;
+    }
+
+    // Assign Confused
+    for (let i = 0; i < confusedCount; i++) {
+        let idx = Math.floor(Math.random() * roles.length);
+        while (roles[idx].role !== 'Correct') idx = Math.floor(Math.random() * roles.length);
+        roles[idx].role = 'Confused';
+        roles[idx].word = word2;
+    }
+
+    // Assign Spy
+    for (let i = 0; i < spyCount; i++) {
+        let idx = Math.floor(Math.random() * roles.length);
+        while (roles[idx].role !== 'Correct') idx = Math.floor(Math.random() * roles.length);
+        roles[idx].role = 'Spy';
+        roles[idx].word = '';
     }
 
     return roles;
 }
 
-function randomizeWords(playerCount) {
-    const selectedWords = [];
+function assignRolesChaos (players, word1, word2) {
+    const roles = players.map(p => ({ username: p.username, role: 'Correct', word: word1 }));
 
-    for (let i = 0; i < playerCount; i++) {
-        selectedWords.push(randomWords());
-    }
+    // Random Number Of Confused: 1 To Half Of Players
+    const confusedCount = Math.floor(Math.random() * Math.ceil(players.length / 2)) + 1;
 
-    return selectedWords;
-}
+    // Random Number Of Spies: 0 To Half Of Players
+    const spyCount = Math.floor(Math.random() * Math.ceil(players.length / 2));
 
-async function createRoleList(playerCount, confusedCount, spyCount, selectedWords) {
-    let roles = new Array(playerCount).fill('Correct');
-    let roleAssignments = [];
-
+    // Assign Confused
     for (let i = 0; i < confusedCount; i++) {
-        const randomIndex = Math.floor(Math.random() * playerCount);
-        roles[randomIndex] = 'Confused';
+        let idx = Math.floor(Math.random() * roles.length);
+        while (roles[idx].role !== 'Correct') idx = Math.floor(Math.random() * roles.length);
+        roles[idx].role = 'Confused';
+        roles[idx].word = word2;
     }
 
+    // Assign Spy
     for (let i = 0; i < spyCount; i++) {
-        let randomIndex = Math.floor(Math.random() * playerCount);
-
-        while (roles[randomIndex] !== 'Correct') {
-            randomIndex = Math.floor(Math.random() * playerCount);
-        }
-
-        roles[randomIndex] = 'Spy';
+        let idx = Math.floor(Math.random() * roles.length);
+        while (roles[idx].role !== 'Correct') idx = Math.floor(Math.random() * roles.length);
+        roles[idx].role = 'Spy';
+        roles[idx].word = '';
     }
 
-    for (let i = 0; i < playerCount; i++) {
-        const role = roles[i];
-        const word = selectedWords[i];
-        let confusedWord = word;
-
-        if (role === 'Confused') {
-            confusedWord = await getSimilarWord(word);
-        }
-
-        roleAssignments.push({ role, word: confusedWord });
-    }
-
-    return roleAssignments;
+    return roles;
 }
 
-async function getSimilarWord(word) {
-    try {
-        const response = await axios.get('https://api.datamuse.com/words', {
-            params: {
-                rel_syn: word,
-                max: 5,
-            },
+// -------------------- SOCKET.IO --------------------
+io.on('connection', socket => {
+    console.log('User Connected:', socket.id);
+
+    // --------- CREATE ROOM ---------
+    socket.on('createRoom', ({ username }) => {
+        const code = generateRoomCode();
+
+        db.serialize(() => {
+            db.run(`INSERT INTO rooms (code, host_socket) VALUES (?, ?)`, [code, socket.id]);
+
+            db.run(
+                `INSERT INTO players (room_code, socket_id, username) VALUES (?, ?, ?)`,
+                [code, socket.id, username],
+                () => {
+                    socket.join(code);
+                    socket.emit('roomCreated', { code });
+                    socket.emit('playerList', [{ username }]);
+                }
+            );
         });
+    });
 
-        const similarWords = response.data.map(item => item.word);
+    // --------- JOIN ROOM ---------
+    socket.on('joinRoom', ({ username, code }) => {
+        db.get(`SELECT * FROM rooms WHERE code = ?`, [code], (err, room) => {
+            if (err || !room) {
+                socket.emit('errorMessage', 'Room Not Found.');
+                return;
+            }
 
-        if (similarWords.length > 0) {
-            return similarWords[Math.floor(Math.random() * similarWords.length)];
-        } else {
-            return word;
-        }
-    } catch (error) {
-        console.error('Error fetching similar word:', error);
-        return word;
-    }
-}
+            if (room.started) {
+                socket.emit('errorMessage', 'Game Already Started.');
+                return;
+            }
 
-app.listen(port);
+            // Prevent duplicate username
+            db.get(
+                `SELECT * FROM players WHERE room_code = ? AND username = ?`,
+                [code, username],
+                (err2, existing) => {
+                    if (existing) {
+                        socket.emit('errorMessage', 'Username Already Taken In This Room.');
+                        return;
+                    }
+
+                    db.run(
+                        `INSERT INTO players (room_code, socket_id, username) VALUES (?, ?, ?)`,
+                        [code, socket.id, username],
+                        () => {
+                            socket.join(code);
+
+                            // Update Player List
+                            db.all(`SELECT username FROM players WHERE room_code = ?`, [code], (err3, players) => {
+                                io.to(code).emit('playerList', players);
+                            });
+
+                            // Show Waiting Message
+                            socket.emit('roomJoined', { code });
+                        }
+                    );
+                }
+            );
+        });
+    });
+
+    // --------- START GAME ---------
+    socket.on('startGame', ({ code, chaosMode }) => {
+        db.get(`SELECT * FROM rooms WHERE code = ?`, [code], (err, room) => {
+            if (err || !room) {
+                return;
+            }
+
+            db.all(`SELECT username, socket_id FROM players WHERE room_code = ?`, [code], (err, players) => {
+                if (err || !players) {
+                    return;
+                }
+
+                // Check If The Number Of Players Is 4-8
+                if (players.length < 4 || players.length > 8) {
+                    socket.emit('errorMessage', 'Game Requires 4 To 8 Players To Start.');
+                    return;
+                }
+
+                // Pick Random Word Pair
+                db.get(`SELECT word1, word2 FROM words ORDER BY RANDOM() LIMIT 1`, [], (err, words) => {
+                    if (err || !words) {
+                        return;
+                    }
+
+                    // Randomly Decide Which Is Main/Confused
+                    let mainWord, confusedWord;
+
+                    if (Math.random() < 0.5) {
+                        mainWord = words.word1;
+                        confusedWord = words.word2;
+                    } else {
+                        mainWord = words.word2;
+                        confusedWord = words.word1;
+                    }
+
+                    // Assign Roles Based On Chaos Mode
+                    let roles = chaosMode
+                        ? assignRolesChaos(players, mainWord, confusedWord)
+                        : assignRoles(players, mainWord, confusedWord);
+
+                    // Update Room And Start Game
+                    db.run(
+                        `UPDATE rooms SET started = 1, word1 = ?, word2 = ? WHERE code = ?`,
+                        [mainWord, confusedWord, code]
+                    );
+
+                    // Assign Role To Each Player And Emit gameStarted
+                    roles.forEach(r => {
+                        db.run(
+                            `UPDATE players SET role = ?, word = ? WHERE room_code = ? AND username = ?`,
+                            [r.role, r.word, code, r.username]
+                        );
+
+                        const playerSocket = players.find(p => p.username === r.username).socket_id;
+                        let realWord = r.word;
+
+                        if (r.role === 'Confused') {
+                            realWord = mainWord;
+                        }
+
+                        io.to(playerSocket).emit('gameStarted', {
+                            role: r.role,
+                            word: r.word,
+                            real: realWord
+                        });
+                    });
+                });
+            });
+        });
+    });
+
+    // --------- REVEAL CONFUSED ---------
+    socket.on('revealConfused', code => {
+        db.get(`SELECT word2 FROM rooms WHERE code = ?`, [code], (err, row) => {
+            if (row) socket.emit('confusedReveal', row.word2);
+        });
+    });
+
+    // --------- RESTART GAME ---------
+    socket.on('restartGame', code => {
+        db.run(`UPDATE rooms SET started = 0, word1 = NULL, word2 = NULL WHERE code = ?`, [code], () => {
+            db.run(`UPDATE players SET role = NULL, word = NULL WHERE room_code = ?`, [code], () => {
+                io.to(code).emit('gameReset');
+            });
+        });
+    });
+
+    // --------- DISCONNECT ---------
+    socket.on('disconnect', () => {
+        db.run(`DELETE FROM players WHERE socket_id = ?`, [socket.id]);
+        console.log('User Disconnected:', socket.id);
+    });
+});
+
+http.listen(PORT);
