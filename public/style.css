@@ -1,0 +1,66 @@
+body {
+    font-family: 'Press Start 2P', cursive;
+    background: #111;
+    color: #0f0;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+}
+
+h1 {
+    font-size: 3em;
+    color: #f0f;
+    margin-top: 30px;
+    text-shadow: 2px 2px 5px rgba(255, 0, 255, 0.7);
+}
+
+.container {
+    max-width: 600px;
+    margin: 20px auto;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 20px;
+    border-radius: 10px;
+}
+
+input,
+button {
+    padding: 10px;
+    margin: 5px;
+    font-size: 16px;
+}
+
+button {
+    border: none;
+    border-radius: 5px;
+    background: #f0f;
+    color: #fff;
+    cursor: pointer;
+    transition: 0.2s;
+    margin-bottom: 10px;
+}
+
+button:hover {
+    background: #f3c;
+}
+
+#playerList {
+    text-align: left;
+    margin-top: 10px;
+}
+
+.wordBox {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    font-size: 24px;
+    font-weight: bold;
+    padding: 15px;
+    border-radius: 10px;
+    background: rgba(0, 255, 0, 0.7);
+    color: #111;
+    display: inline-block;
+}
+
+.checkbox-container {
+    margin-top: 10px;
+    font-size: 16px;
+}

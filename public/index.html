@@ -5,75 +5,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Spy Game - Game of Spies, Confused and Correct</title>
         <script src="/socket.io/socket.io.js"></script>
+        <script src="/app.js"></script>
         <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-        <style>
-            body {
-                font-family: 'Press Start 2P', cursive;
-                background: #111;
-                color: #0f0;
-                text-align: center;
-                margin: 0;
-                padding: 0;
-            }
-
-            h1 {
-                font-size: 3em;
-                color: #f0f;
-                margin-top: 30px;
-                text-shadow: 2px 2px 5px rgba(255, 0, 255, 0.7);
-            }
-
-            .container {
-                max-width: 600px;
-                margin: 20px auto;
-                background: rgba(0, 0, 0, 0.7);
-                padding: 20px;
-                border-radius: 10px;
-            }
-
-            input,
-            button {
-                padding: 10px;
-                margin: 5px;
-                font-size: 16px;
-            }
-
-            button {
-                border: none;
-                border-radius: 5px;
-                background: #f0f;
-                color: #fff;
-                cursor: pointer;
-                transition: 0.2s;
-                margin-bottom: 10px;
-            }
-
-            button:hover {
-                background: #f3c;
-            }
-
-            #playerList {
-                text-align: left;
-                margin-top: 10px;
-            }
-
-            .wordBox {
-                margin-top: 20px;
-                margin-bottom: 20px;
-                font-size: 24px;
-                font-weight: bold;
-                padding: 15px;
-                border-radius: 10px;
-                background: rgba(0, 255, 0, 0.7);
-                color: #111;
-                display: inline-block;
-            }
-
-            .checkbox-container {
-                margin-top: 10px;
-                font-size: 16px;
-            }
-        </style>
+        <link rel="stylesheet" href="/style.css">
     </head>
     <body>
         <h1>Spy Game</h1>
@@ -87,131 +21,22 @@
             <input type="text" id="roomCode" placeholder="Room Code">
             <button id="joinRoomBtn">Join Room</button>
         </div>
-
         <div class="container" id="lobby" style="display:none;">
             <h2>Room: <span id="currentRoom"></span></h2>
             <h3>Players:</h3>
             <ul id="playerList"></ul>
             <p id="waitingMsg">Waiting For Game To Start…</p>
-
             <div class="checkbox-container">
                 <label>
                     <input type="checkbox" id="chaosMode"> Chaos Mode
                 </label>
             </div>
-
             <button id="startGameBtn" style="display:none;">Start Game</button>
         </div>
-
         <div class="container" id="gameArea" style="display:none;">
             <div class="wordBox" id="wordBox"></div>
             <button id="confusedBtn" style="display:none;">Am I Confused?</button>
             <button id="restartBtn" style="display:none;">Restart Game</button>
         </div>
-
-        <script>
-            const socket = io();
-            let currentRoom = '';
-            let isHost = false;
-            let username = '';
-            let assignedWord = '';
-            let realWord = '';
-
-            // -------------------- CREATE ROOM --------------------
-            document.getElementById('createRoomBtn').onclick = () => {
-                const name = document.getElementById('hostName').value.trim();
-                if (!name) return alert('Enter your name');
-                username = name;
-                isHost = true;
-                socket.emit('createRoom', { username });
-            };
-
-            // -------------------- JOIN ROOM --------------------
-            document.getElementById('joinRoomBtn').onclick = () => {
-                const name = document.getElementById('joinName').value.trim();
-                const code = document.getElementById('roomCode').value.trim().toUpperCase();
-                if (!name || !code) return alert('Enter name and room code');
-                username = name;
-                socket.emit('joinRoom', { username, code });
-            };
-
-            // -------------------- SOCKET EVENTS --------------------
-            socket.on('roomCreated', ({ code }) => {
-                currentRoom = code;
-                document.getElementById('joinCreate').style.display = 'none';
-                document.getElementById('lobby').style.display = 'block';
-                document.getElementById('currentRoom').innerText = code;
-                document.getElementById('startGameBtn').style.display = 'inline-block';
-            });
-
-            socket.on('roomJoined', ({ code }) => {
-                currentRoom = code;
-                document.getElementById('joinCreate').style.display = 'none';
-                document.getElementById('lobby').style.display = 'block';
-                document.getElementById('currentRoom').innerText = code;
-                document.getElementById('startGameBtn').style.display = isHost ? 'inline-block' : 'none';
-            });
-
-            socket.on('playerList', (players) => {
-                const ul = document.getElementById('playerList');
-                ul.innerHTML = '';
-                players.forEach(p => {
-                    const li = document.createElement('li');
-                    li.textContent = p.username;
-                    ul.appendChild(li);
-                });
-            });
-
-            socket.on('errorMessage', msg => alert(msg));
-
-            // -------------------- START GAME --------------------
-            document.getElementById('startGameBtn').onclick = () => {
-                if (!username) {
-                    return alert('Host Username Not Set');
-                }
-
-                const chaos = document.getElementById('chaosMode').checked;
-                socket.emit('startGame', { code: currentRoom, chaosMode: chaos });
-            };
-
-            socket.on('gameStarted', ({ role, word, real }) => {
-                document.getElementById('lobby').style.display = 'none';
-                document.getElementById('gameArea').style.display = 'block';
-                assignedWord = word;
-                realWord = real;
-                const wordBox = document.getElementById('wordBox');
-
-                if (role === 'Spy') {
-                    wordBox.innerText = "You're the Spy!";
-                    document.getElementById('confusedBtn').style.display = 'none';
-                } else {
-                    wordBox.innerText = assignedWord;
-                    document.getElementById('confusedBtn').style.display = 'inline-block';
-                }
-
-                if (isHost) {
-                    document.getElementById('restartBtn').style.display = 'inline-block';
-                }
-            });
-
-            // -------------------- CONFUSED BUTTON --------------------
-            document.getElementById('confusedBtn').onclick = () => {
-                document.getElementById('wordBox').innerText = realWord;
-                document.getElementById('confusedBtn').style.display = 'none';
-            };
-
-            // -------------------- RESTART GAME --------------------
-            document.getElementById('restartBtn').onclick = () => {
-                socket.emit('restartGame', currentRoom);
-            };
-
-            socket.on('gameReset', () => {
-                document.getElementById('gameArea').style.display = 'none';
-                document.getElementById('lobby').style.display = 'block';
-                document.getElementById('wordBox').innerText = '';
-                document.getElementById('confusedBtn').style.display = 'none';
-                document.getElementById('startGameBtn').style.display = isHost ? 'inline-block' : 'none';
-            });
-        </script>
     </body>
 </html>

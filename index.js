@@ -116,7 +116,7 @@ io.on('connection', socket => {
                 return;
             }
 
-            // Prevent duplicate username
+            // Prevent Duplicate Username
             db.get(
                 `SELECT * FROM players WHERE room_code = ? AND username = ?`,
                 [code, username],
