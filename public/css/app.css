@@ -41,7 +41,8 @@ button {
     color: #fff;
     cursor: pointer;
     transition: 0.2s;
-    margin-bottom: 10px;
+    margin-top: 2%;
+    margin-bottom: 2%;
 }
 
 button:hover {
@@ -58,11 +59,8 @@ button:hover {
     margin-bottom: 20px;
     font-size: 24px;
     font-weight: bold;
-    padding: 15px;
-    border-radius: 10px;
-    background: rgba(0, 255, 0, 0.7);
-    color: #111;
-    display: inline-block;
+    color: #fff;
+    display: block;
 }
 
 .checkbox-container {

@@ -3,20 +3,20 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Spy Game - Game of Spies, Confused and Correct</title>
-        <link rel="apple-touch-icon-precomposed" sizes="57x57" href="apple-touch-icon-57x57.png"/>
-        <link rel="apple-touch-icon-precomposed" sizes="114x114" href="apple-touch-icon-114x114.png"/>
-        <link rel="apple-touch-icon-precomposed" sizes="72x72" href="apple-touch-icon-72x72.png"/>
-        <link rel="apple-touch-icon-precomposed" sizes="144x144" href="apple-touch-icon-144x144.png"/>
-        <link rel="apple-touch-icon-precomposed" sizes="60x60" href="apple-touch-icon-60x60.png"/>
-        <link rel="apple-touch-icon-precomposed" sizes="120x120" href="apple-touch-icon-120x120.png"/>
-        <link rel="apple-touch-icon-precomposed" sizes="76x76" href="apple-touch-icon-76x76.png"/>
-        <link rel="apple-touch-icon-precomposed" sizes="152x152" href="apple-touch-icon-152x152.png"/>
-        <link rel="icon" type="image/png" href="favicon-196x196.png" sizes="196x196"/>
-        <link rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96"/>
-        <link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32"/>
-        <link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16"/>
-        <link rel="icon" type="image/png" href="favicon-128.png" sizes="128x128"/>
+        <title>Spy Game</title>
+        <link rel="apple-touch-icon-precomposed" sizes="57x57" href="images/apple-touch-icon-57x57.png"/>
+        <link rel="apple-touch-icon-precomposed" sizes="114x114" href="images/apple-touch-icon-114x114.png"/>
+        <link rel="apple-touch-icon-precomposed" sizes="72x72" href="images/apple-touch-icon-72x72.png"/>
+        <link rel="apple-touch-icon-precomposed" sizes="144x144" href="images/apple-touch-icon-144x144.png"/>
+        <link rel="apple-touch-icon-precomposed" sizes="60x60" href="images/apple-touch-icon-60x60.png"/>
+        <link rel="apple-touch-icon-precomposed" sizes="120x120" href="images/apple-touch-icon-120x120.png"/>
+        <link rel="apple-touch-icon-precomposed" sizes="76x76" href="images/apple-touch-icon-76x76.png"/>
+        <link rel="apple-touch-icon-precomposed" sizes="152x152" href="images/apple-touch-icon-152x152.png"/>
+        <link rel="icon" type="image/png" href="images/favicon-196x196.png" sizes="196x196"/>
+        <link rel="icon" type="image/png" href="images/favicon-96x96.png" sizes="96x96"/>
+        <link rel="icon" type="image/png" href="images/favicon-32x32.png" sizes="32x32"/>
+        <link rel="icon" type="image/png" href="images/favicon-16x16.png" sizes="16x16"/>
+        <link rel="icon" type="image/png" href="images/favicon-128.png" sizes="128x128"/>
         <meta name="application-name" content="&nbsp;"/>
         <meta name="msapplication-TileColor" content="#FFFFFF"/>
         <meta name="msapplication-TileImage" content="mstile-144x144.png"/>
@@ -25,13 +25,13 @@
         <meta name="msapplication-wide310x150logo" content="mstile-310x150.png"/>
         <meta name="msapplication-square310x310logo" content="mstile-310x310.png"/>
         <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="/app.css?v=1.0.1">
+        <link rel="stylesheet" href="/css/app.css?v=1.0.2">
         <script src="/socket.io/socket.io.js"></script>
-        <script src="/app.js?v=1.0.1"></script>
+        <script src="/js/app.js?v=1.0.2"></script>
     </head>
     <body>
         <header class="logo-header">
-            <img src="/logo.png" alt="Spy Game Logo" class="logo">
+            <img src="/images/logo.png" alt="Spy Game Logo" class="logo">
         </header>
         <div class="container" id="joinCreate">
             <h2>Create Room</h2>
@@ -49,7 +49,7 @@
             <h3>Players:</h3>
             <ul id="playerList"></ul>
             <p id="waitingMsg">Waiting For Game To Start…</p>
-            <div class="checkbox-container">
+            <div class="checkbox-container" style="display:none;">
                 <label>
                     <input type="checkbox" id="chaosMode"> Chaos Mode
                 </label>
@@ -61,6 +61,6 @@
             <button id="confusedBtn" style="display:none;">Am I Confused?</button>
             <button id="restartBtn" style="display:none;">Restart Game</button>
         </div>
-        <audio id="lobbyMusic" src="/lobby.mp3" loop></audio>
+        <audio id="lobbyMusic" src="/music/lobby.mp3" loop></audio>
     </body>
 </html>

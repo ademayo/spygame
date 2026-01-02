@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 clearInterval(fadeInterval);
                 lobbyMusic.pause();
-                muteBtn.style.display = 'none';
             }
         }, 100);
     }
@@ -49,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // -------------------- SOCKET EVENTS --------------------
-    socket.on('roomCreated', ({ code }) => {
+    socket.on('roomCreated', ({ code, isHost }) => {
         currentRoom = code;
         document.getElementById('joinCreate').style.display = 'none';
         document.getElementById('lobby').style.display = 'block';
@@ -57,6 +56,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('startGameBtn').style.display = 'inline-block';
 
         if (isHost) {
+            document.querySelector('.checkbox-container').style.display = 'block';
+            document.getElementById('startGameBtn').style.display = 'inline-block';
+            document.getElementById('restartBtn').style.display = 'none';
+            document.getElementById('wordBox').innerText = 'Waiting For Host To Start The Game...'
             lobbyMusic.play().catch(() => {});
         }
     });
@@ -69,6 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('startGameBtn').style.display = isHost ? 'inline-block' : 'none';
 
         if (isHost) {
+            document.querySelector('.checkbox-container').style.display = 'none';
+            document.getElementById('startGameBtn').style.display = 'none';
             lobbyMusic.play().catch(() => {});
         }
     });
@@ -163,9 +168,5 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isHost) {
             muteBtn.style.display = 'inline-block';
         }
-    };
-
-    lobbyMusic.onpause = () => {
-        muteBtn.style.display = 'none';
     };
 });

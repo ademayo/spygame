@@ -24,27 +24,30 @@ function generateRoomCode (length = 4) {
 }
 
 function assignRoles (players, word1, word2) {
-    const roles = players.map(p => ({ username: p.username, role: 'Correct', word: word1 }));
+    const roles = players.map(p => ({
+        username: p.username,
+        role: 'Correct',
+        word: word1
+    }));
+
     let confusedCount = 1;
     let spyCount = players.length >= 5 ? 1 : 0;
 
-    if (players.length >= 7 && players.length <= 8) {
+    if (players.length >= 7) {
         confusedCount = 2;
-        spyCount = 1;
     }
 
-    // Assign Confused
+    const available = roles.map((_, i) => i);
+    const pick = () => available.splice(Math.floor(Math.random() * available.length), 1)[0];
+
     for (let i = 0; i < confusedCount; i++) {
-        let idx = Math.floor(Math.random() * roles.length);
-        while (roles[idx].role !== 'Correct') idx = Math.floor(Math.random() * roles.length);
+        const idx = pick();
         roles[idx].role = 'Confused';
         roles[idx].word = word2;
     }
 
-    // Assign Spy
-    for (let i = 0; i < spyCount; i++) {
-        let idx = Math.floor(Math.random() * roles.length);
-        while (roles[idx].role !== 'Correct') idx = Math.floor(Math.random() * roles.length);
+    for (let i = 0; i < spyCount && available.length; i++) {
+        const idx = pick();
         roles[idx].role = 'Spy';
         roles[idx].word = '';
     }
@@ -53,26 +56,27 @@ function assignRoles (players, word1, word2) {
 }
 
 function assignRolesChaos (players, word1, word2) {
-    const roles = players.map(p => ({ username: p.username, role: 'Correct', word: word1 }));
+    const roles = players.map(p => ({
+        username: p.username,
+        role: 'Correct',
+        word: word1
+    }));
 
-    // Random Number Of Confused: 1 To Half Of Players
-    const confusedCount = Math.floor(Math.random() * Math.ceil(players.length / 2)) + 1;
+    const max = Math.floor(players.length / 2);
+    const confusedCount = Math.floor(Math.random() * max) + 1;
+    const spyCount = Math.floor(Math.random() * max);
 
-    // Random Number Of Spies: 0 To Half Of Players
-    const spyCount = Math.floor(Math.random() * Math.ceil(players.length / 2));
+    const available = roles.map((_, i) => i);
+    const pick = () => available.splice(Math.floor(Math.random() * available.length), 1)[0];
 
-    // Assign Confused
-    for (let i = 0; i < confusedCount; i++) {
-        let idx = Math.floor(Math.random() * roles.length);
-        while (roles[idx].role !== 'Correct') idx = Math.floor(Math.random() * roles.length);
+    for (let i = 0; i < confusedCount && available.length; i++) {
+        const idx = pick();
         roles[idx].role = 'Confused';
         roles[idx].word = word2;
     }
 
-    // Assign Spy
-    for (let i = 0; i < spyCount; i++) {
-        let idx = Math.floor(Math.random() * roles.length);
-        while (roles[idx].role !== 'Correct') idx = Math.floor(Math.random() * roles.length);
+    for (let i = 0; i < spyCount && available.length; i++) {
+        const idx = pick();
         roles[idx].role = 'Spy';
         roles[idx].word = '';
     }
@@ -82,11 +86,14 @@ function assignRolesChaos (players, word1, word2) {
 
 // -------------------- SOCKET.IO --------------------
 io.on('connection', socket => {
-    console.log('User Connected:', socket.id);
+    console.log('CONNECTED:', socket.id);
 
     // --------- CREATE ROOM ---------
     socket.on('createRoom', ({ username }) => {
         const code = generateRoomCode();
+        socket.roomCode = code;
+        socket.username = username;
+        socket.isHost = true;
 
         db.serialize(() => {
             db.run(`INSERT INTO rooms (code, host_socket) VALUES (?, ?)`, [code, socket.id]);
@@ -96,8 +103,8 @@ io.on('connection', socket => {
                 [code, socket.id, username],
                 () => {
                     socket.join(code);
-                    socket.emit('roomCreated', { code });
-                    socket.emit('playerList', [{ username }]);
+                    socket.emit('roomCreated', { code, isHost: true });
+                    io.to(code).emit('playerList', [{ username }]);
                 }
             );
         });
@@ -106,39 +113,37 @@ io.on('connection', socket => {
     // --------- JOIN ROOM ---------
     socket.on('joinRoom', ({ username, code }) => {
         db.get(`SELECT * FROM rooms WHERE code = ?`, [code], (err, room) => {
-            if (err || !room) {
-                socket.emit('errorMessage', 'Room Not Found.');
+            if (!room || room.started) {
+                socket.emit('errorMessage', 'Room Not Available.');
                 return;
             }
 
-            if (room.started) {
-                socket.emit('errorMessage', 'Game Already Started.');
-                return;
-            }
-
-            // Prevent Duplicate Username
             db.get(
                 `SELECT * FROM players WHERE room_code = ? AND username = ?`,
                 [code, username],
-                (err2, existing) => {
+                (err, existing) => {
                     if (existing) {
-                        socket.emit('errorMessage', 'Username Already Taken In This Room.');
+                        socket.emit('errorMessage', 'Username Taken.');
                         return;
                     }
+
+                    socket.roomCode = code;
+                    socket.username = username;
+                    socket.isHost = false;
 
                     db.run(
                         `INSERT INTO players (room_code, socket_id, username) VALUES (?, ?, ?)`,
                         [code, socket.id, username],
                         () => {
                             socket.join(code);
-
-                            // Update Player List
-                            db.all(`SELECT username FROM players WHERE room_code = ?`, [code], (err3, players) => {
-                                io.to(code).emit('playerList', players);
-                            });
-
-                            // Show Waiting Message
-                            socket.emit('roomJoined', { code });
+                            db.all(
+                                `SELECT username FROM players WHERE room_code = ?`,
+                                [code],
+                                (err, players) => {
+                                    io.to(code).emit('playerList', players);
+                                }
+                            );
+                            socket.emit('roomJoined', { code, isHost: false });
                         }
                     );
                 }
@@ -146,97 +151,121 @@ io.on('connection', socket => {
         });
     });
 
+    // --------- REJOIN (RECONNECT FIX) ---------
+    socket.on('rejoinRoom', ({ code, username }) => {
+        socket.roomCode = code;
+        socket.username = username;
+        socket.join(code);
+
+        db.run(
+            `UPDATE players SET socket_id = ? WHERE room_code = ? AND username = ?`,
+            [socket.id, code, username],
+            () => {
+                db.all(
+                    `SELECT username FROM players WHERE room_code = ?`,
+                    [code],
+                    (err, players) => {
+                        io.to(code).emit('playerList', players);
+                    }
+                );
+            }
+        );
+    });
+
     // --------- START GAME ---------
     socket.on('startGame', ({ code, chaosMode }) => {
         db.get(`SELECT * FROM rooms WHERE code = ?`, [code], (err, room) => {
-            if (err || !room) {
+            if (!room || room.host_socket !== socket.id) {
+                socket.emit('errorMessage', 'Only host can start.');
                 return;
             }
 
-            db.all(`SELECT username, socket_id FROM players WHERE room_code = ?`, [code], (err, players) => {
-                if (err || !players) {
-                    return;
-                }
-
-                // Check If The Number Of Players Is 4-8
-                if (players.length < 4 || players.length > 8) {
-                    socket.emit('errorMessage', 'Game Requires 4 To 8 Players To Start.');
-                    return;
-                }
-
-                // Pick Random Word Pair
-                db.get(`SELECT word1, word2 FROM words ORDER BY RANDOM() LIMIT 1`, [], (err, words) => {
-                    if (err || !words) {
+            db.all(
+                `SELECT username, socket_id FROM players WHERE room_code = ?`,
+                [code],
+                (err, players) => {
+                    if (players.length < 4 || players.length > 8) {
+                        socket.emit('errorMessage', '4–8 players required.');
                         return;
                     }
 
-                    // Randomly Decide Which Is Main/Confused
-                    let mainWord, confusedWord;
+                    db.get(
+                        `SELECT word1, word2 FROM words ORDER BY RANDOM() LIMIT 1`,
+                        [],
+                        (err, words) => {
+                            const mainWord = Math.random() < 0.5 ? words.word1 : words.word2;
+                            const confusedWord = mainWord === words.word1 ? words.word2 : words.word1;
 
-                    if (Math.random() < 0.5) {
-                        mainWord = words.word1;
-                        confusedWord = words.word2;
-                    } else {
-                        mainWord = words.word2;
-                        confusedWord = words.word1;
-                    }
+                            const roles = chaosMode
+                                ? assignRolesChaos(players, mainWord, confusedWord)
+                                : assignRoles(players, mainWord, confusedWord);
 
-                    // Assign Roles Based On Chaos Mode
-                    let roles = chaosMode
-                        ? assignRolesChaos(players, mainWord, confusedWord)
-                        : assignRoles(players, mainWord, confusedWord);
+                            db.run(
+                                `UPDATE rooms SET started = 1, word1 = ?, word2 = ? WHERE code = ?`,
+                                [mainWord, confusedWord, code]
+                            );
 
-                    // Update Room And Start Game
-                    db.run(
-                        `UPDATE rooms SET started = 1, word1 = ?, word2 = ? WHERE code = ?`,
-                        [mainWord, confusedWord, code]
-                    );
+                            roles.forEach(r => {
+                                const p = players.find(pl => pl.username === r.username);
 
-                    // Assign Role To Each Player And Emit gameStarted
-                    roles.forEach(r => {
-                        db.run(
-                            `UPDATE players SET role = ?, word = ? WHERE room_code = ? AND username = ?`,
-                            [r.role, r.word, code, r.username]
-                        );
+                                db.run(
+                                    `UPDATE players SET role = ?, word = ? WHERE room_code = ? AND username = ?`,
+                                    [r.role, r.word, code, r.username]
+                                );
 
-                        const playerSocket = players.find(p => p.username === r.username).socket_id;
-                        let realWord = r.word;
-
-                        if (r.role === 'Confused') {
-                            realWord = mainWord;
+                                io.to(p.socket_id).emit('gameStarted', {
+                                    role: r.role,
+                                    word: r.word,
+                                    real: r.role === 'Confused' ? mainWord : r.word
+                                });
+                            });
                         }
-
-                        io.to(playerSocket).emit('gameStarted', {
-                            role: r.role,
-                            word: r.word,
-                            real: realWord
-                        });
-                    });
-                });
-            });
-        });
-    });
-
-    // --------- REVEAL CONFUSED ---------
-    socket.on('revealConfused', code => {
-        db.get(`SELECT word2 FROM rooms WHERE code = ?`, [code], (err, row) => {
-            if (row) socket.emit('confusedReveal', row.word2);
+                    );
+                }
+            );
         });
     });
 
     // --------- RESTART GAME ---------
     socket.on('restartGame', code => {
-        db.run(`UPDATE rooms SET started = 0, word1 = NULL, word2 = NULL WHERE code = ?`, [code], () => {
-            db.run(`UPDATE players SET role = NULL, word = NULL WHERE room_code = ?`, [code], () => {
-                io.to(code).emit('gameReset');
-            });
+        db.get(`SELECT host_socket FROM rooms WHERE code = ?`, [code], (err, room) => {
+            if (!room || room.host_socket !== socket.id) {
+                return;
+            }
+
+            db.run(
+                `UPDATE rooms SET started = 0, word1 = NULL, word2 = NULL WHERE code = ?`,
+                [code],
+                () => {
+                    db.run(
+                        `UPDATE players SET role = NULL, word = NULL WHERE room_code = ?`,
+                        [code],
+                        () => io.to(code).emit('gameReset')
+                    );
+                }
+            );
         });
     });
 
     // --------- DISCONNECT ---------
     socket.on('disconnect', () => {
-        db.run(`DELETE FROM players WHERE socket_id = ?`, [socket.id]);
-        console.log('User Disconnected:', socket.id);
+        if (!socket.roomCode || !socket.username) return;
+
+        db.run(
+            `DELETE FROM players WHERE room_code = ? AND username = ?`,
+            [socket.roomCode, socket.username],
+            () => {
+                db.all(
+                    `SELECT username FROM players WHERE room_code = ?`,
+                    [socket.roomCode],
+                    (err, players) => {
+                        io.to(socket.roomCode).emit('playerList', players);
+                    }
+                );
+            }
+        );
+
+        console.log('DISCONNECTED:', socket.username);
     });
 });
 
