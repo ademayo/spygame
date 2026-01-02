@@ -249,7 +249,9 @@ io.on('connection', socket => {
 
     // --------- DISCONNECT ---------
     socket.on('disconnect', () => {
-        if (!socket.roomCode || !socket.username) return;
+        if (!socket.roomCode || !socket.username) {
+            return;
+        }
 
         db.run(
             `DELETE FROM players WHERE room_code = ? AND username = ?`,
@@ -268,5 +270,41 @@ io.on('connection', socket => {
         console.log('DISCONNECTED:', socket.username);
     });
 });
+
+// -------------------- ROOM CLEANUP --------------------
+const ROOM_TTL_HOURS= 1;
+const CLEANUP_INTERVAL_MINUTES = 15;
+
+setInterval(() => {
+    db.serialize(() => {
+        db.all(
+            `
+            SELECT r.code
+            FROM rooms r
+            LEFT JOIN players p ON p.room_code = r.code
+            WHERE r.created_at < datetime('now', ?)
+            GROUP BY r.code
+            HAVING COUNT(p.id) = 0
+            `,
+            [`-${ROOM_TTL_HOURS} Hours`],
+            (err, rooms) => {
+                if (err) {
+                    console.error('Cleanup Error:', err);
+                    return;
+                }
+
+                rooms.forEach(room => {
+                    db.run(
+                        `DELETE FROM rooms WHERE code = ?`,
+                        [room.code],
+                        () => {
+                            console.log(`🧹 Cleaned Up Room ${room.code}`);
+                        }
+                    );
+                });
+            }
+        );
+    });
+}, CLEANUP_INTERVAL_MINUTES * 60 * 1000);
 
 http.listen(PORT);
