@@ -5,7 +5,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let username = '';
     let assignedWord = '';
     let realWord = '';
+
+    const musicTracks = [
+        '/music/lobby1.mp3',
+        '/music/lobby2.mp3'
+    ];
+
     const lobbyMusic = document.getElementById('lobbyMusic');
+    lobbyMusic.src = musicTracks[Math.floor(Math.random() * musicTracks.length)];
     const muteBtn = document.getElementById('muteBtn');
     let isMuted = false;
 
