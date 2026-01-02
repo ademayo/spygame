@@ -1,6 +1,6 @@
 {
   "name": "spygame",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Game of Spies, Confused and Correct",
   "main": "index.js",
   "scripts": {

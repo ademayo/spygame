@@ -112,12 +112,12 @@ document.addEventListener('DOMContentLoaded', () => {
         realWord = real;
         const wordBox = document.getElementById('wordBox');
 
-        if (role === 'Spy') {
-            wordBox.innerText = "You're The Spy!";
-            document.getElementById('confusedBtn').style.display = 'none';
+        if (role === 'Spy' || role === 'Confused') {
+            wordBox.innerText = role === 'Spy' ? "You're The Spy!" : assignedWord;
+            document.getElementById('revealRealBtn').style.display = 'inline-block';
         } else {
             wordBox.innerText = assignedWord;
-            document.getElementById('confusedBtn').style.display = 'inline-block';
+            document.getElementById('revealRealBtn').style.display = 'none';
         }
 
         if (isHost) {
@@ -125,10 +125,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // -------------------- CONFUSED BUTTON --------------------
-    document.getElementById('confusedBtn').onclick = () => {
+    // -------------------- REVEAL REAL BUTTON --------------
+    document.getElementById('revealRealBtn').onclick = () => {
         document.getElementById('wordBox').innerText = realWord;
-        document.getElementById('confusedBtn').style.display = 'none';
+        document.getElementById('revealRealBtn').style.display = 'none';
     };
 
     // -------------------- RESTART GAME --------------------
