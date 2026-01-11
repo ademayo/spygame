@@ -253,20 +253,6 @@ io.on('connection', socket => {
             return;
         }
 
-        db.run(
-            `DELETE FROM players WHERE room_code = ? AND username = ?`,
-            [socket.roomCode, socket.username],
-            () => {
-                db.all(
-                    `SELECT username FROM players WHERE room_code = ?`,
-                    [socket.roomCode],
-                    (err, players) => {
-                        io.to(socket.roomCode).emit('playerList', players);
-                    }
-                );
-            }
-        );
-
         console.log('DISCONNECTED:', socket.username);
     });
 });
