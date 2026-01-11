@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const musicTracks = [
         '/music/lobby1.mp3',
-        '/music/lobby2.mp3'
+        '/music/lobby2.mp3',
+        '/music/lobby3.mp3'
     ];
 
     const lobbyMusic = document.getElementById('lobbyMusic');
