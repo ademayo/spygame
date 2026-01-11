@@ -119,13 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
         realWord = real;
         const wordBox = document.getElementById('wordBox');
 
-        if (role === 'Spy' || role === 'Confused') {
-            wordBox.innerText = role === 'Spy' ? "You're The Spy!" : assignedWord;
-            document.getElementById('revealRealBtn').style.display = 'inline-block';
-        } else {
-            wordBox.innerText = assignedWord;
-            document.getElementById('revealRealBtn').style.display = 'none';
-        }
+        wordBox.innerText =
+            role === 'Spy'
+                ? 'You\'re The Spy!'
+                : assignedWord;
+
+        document.getElementById('revealRealBtn').style.display = 'inline-block';
 
         if (isHost) {
             document.getElementById('restartBtn').style.display = 'inline-block';

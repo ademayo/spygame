@@ -216,7 +216,7 @@ io.on('connection', socket => {
                                 io.to(p.socket_id).emit('gameStarted', {
                                     role: r.role,
                                     word: r.word,
-                                    real: r.role === 'Confused' ? mainWord : r.word
+                                    real: mainWord
                                 });
                             });
                         }
